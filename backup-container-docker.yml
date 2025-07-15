@@ -112,6 +112,6 @@
         label: "{{ item.path | basename }}"
 
     - name: Log deletion of old logfiles
-      shell: echo "[`date '+%Y-%m-%d %H:%M:%S'`] Alte Logfiles gelöscht: {{ old_logs.matched }}" >> "{{ log_file }}"
+      shell: 'echo "[`date ''+%Y-%m-%d %H:%M:%S''`] Alte Logfiles gelöscht: {{ old_logs.matched }}" >> "{{ log_file }}"'
       when: old_logs.matched > 0
 
