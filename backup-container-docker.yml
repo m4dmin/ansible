@@ -79,7 +79,7 @@
       when: old_backups.matched > 0
 
     - name: Log deletion of aged backups
-      shell: echo "[`date '+%Y-%m-%d %H:%M:%S'`] Alte Backups gelöscht: "{{ deleted_old.results | length }}" >> "{{ log_file }}"
+      shell: echo "[`date '+%Y-%m-%d %H:%M:%S'`] Alte Backups bereinigt: "{{ deleted_old.results | length }}" >> "{{ log_file }}"
       when: deleted_old is defined
 
     - name: Enforce max number of backups per container
