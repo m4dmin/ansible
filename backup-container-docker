@@ -3,8 +3,8 @@
   hosts: all
   become: true
   vars:
-    docker_base_path: /srv/docker
-    backup_target_dir: /srv/docker_backups
+    docker_base_path: /home/madmin/docker
+    backup_target_dir: /home/madmin/backup/test
     max_backups_per_container: 5
     max_backup_age_days: 90
     timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M') }}"
