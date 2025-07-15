@@ -41,6 +41,8 @@
 
         - name: Create tar.gz backup
           become: true
+          become_method: sudo
+          become_user: root
           shell: |
             echo "[`date '+%Y-%m-%d %H:%M:%S'`] Sichere {{ item.path | basename }}" >> "{{ log_file }}"
             tar -czf "{{ backup_target_dir }}/{{ item.path | basename }}_{{ timestamp }}.tar.gz" -C "{{ docker_base_path }}" "{{ item.path | basename }}" >> "{{ log_file }}" 2>&1
