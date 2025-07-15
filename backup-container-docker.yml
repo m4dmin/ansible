@@ -2,6 +2,8 @@
 - name: Backup Docker container directories
   hosts: all
   become: true
+  become_method: sudo
+  become_user: root
   vars:
     docker_base_path: /home/madmin/docker
     backup_target_dir: /home/madmin/backup/mnt
@@ -11,6 +13,9 @@
     log_file: "{{ backup_target_dir }}/backup_log_{{ timestamp }}.log"
   tasks:
     - name: Ensure backup directory exists
+      become: true
+      become_method: sudo
+      become_user: root
       file:
         path: "{{ backup_target_dir }}"
         state: directory
