@@ -6,7 +6,7 @@
   become_user: root
   vars:
     docker_base_path: /home/madmin/docker
-    backup_target_dir: /home/madmin/backup/mnt
+    backup_target_dir: /home/madmin/backup/mnttest
     max_backups_per_container: 5
     max_backup_age_days: 90
     timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M') }}"
