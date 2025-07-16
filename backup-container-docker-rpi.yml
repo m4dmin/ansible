@@ -23,3 +23,94 @@
     - name: Log backup start
       shell: |
         echo "[`date '+%Y-%m-%d %H:%M:%S'`] === Backup gestartet ===" >> "{{ log_file }}"
+
+    - name: Backup each container directory with error handling
+      block:
+        - name: Stop containers via docker compose
+          shell: |
+            echo "[`date '+%Y-%m-%d %H:%M:%S'`] Stoppe {{ item.path | basename }}" >> "{{ log_file }}"
+            docker compose down >> "{{ log_file }}" 2>&1
+          args:
+            chdir: "{{ item.path }}"
+          loop: "{{ container_dirs.files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+
+        - name: Create tar.gz backup
+          become: true
+          become_method: sudo
+          become_user: root
+          shell: |
+            echo "[`date '+%Y-%m-%d %H:%M:%S'`] Sichere {{ item.path | basename }}" >> "{{ log_file }}"
+            tar -czf "{{ backup_target_dir }}/{{ item.path | basename }}_{{ timestamp }}.tar.gz" -C "{{ docker_base_path }}" "{{ item.path | basename }}" >> "{{ log_file }}" 2>&1
+          loop: "{{ container_dirs.files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+
+      rescue:
+        - name: Log error
+          shell: echo "[`date '+%Y-%m-%d %H:%M:%S'`] Fehler beim Backup eines Containers!" >> "{{ log_file }}"
+
+      always:
+        - name: Start containers via docker compose
+          shell: |
+            echo "[`date '+%Y-%m-%d %H:%M:%S'`] Starte {{ item.path | basename }}" >> "{{ log_file }}"
+            docker compose up -d >> "{{ log_file }}" 2>&1
+          args:
+            chdir: "{{ item.path }}"
+          loop: "{{ container_dirs.files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+
+    - name: Find old backups
+      find:
+        paths: "{{ backup_target_dir }}"
+        patterns: "*.tar.gz"
+        age: "{{ max_backup_age_days }}d"
+        recurse: no
+      register: old_backups
+
+    - name: Delete old backup files (by age)
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_backups.files }}"
+      register: deleted_old
+      when: old_backups.matched > 0
+
+    - name: Log deletion of aged backups
+      shell: 'echo "[`date ''+%Y-%m-%d %H:%M:%S''`] Alte Backups gelöscht: {{ deleted_old.results | length }}" >> "{{ log_file }}"'
+      when: deleted_old is defined
+
+    - name: Enforce max number of backups per container
+      shell: |
+        echo "[`date '+%Y-%m-%d %H:%M:%S'`] Überprüfe Anzahl Backups für {{ item }}" >> "{{ log_file }}"
+        ls -1t {{ backup_target_dir }}/{{ item }}_*.tar.gz | tail -n +{{ max_backups_per_container + 1 }} | tee /tmp/oldfiles.txt | xargs -r rm --
+        sed 's/^/[`date "+%Y-%m-%d %H:%M:%S"`] /' /tmp/oldfiles.txt >> "{{ log_file }}"
+        rm -f /tmp/oldfiles.txt
+      args:
+        executable: /bin/bash
+      loop: "{{ container_dirs.files | map(attribute='path') | map('basename') | list }}"
+
+    - name: Log backup end
+      shell: echo "[`date '+%Y-%m-%d %H:%M:%S'`] Backup abgeschlossen" >> "{{ log_file }}"
+
+    - name: Find old logfiles older than 120 days
+      find:
+        paths: "{{ backup_target_dir }}"
+        patterns: "backup_log_*.log"
+        age: 120d
+        recurse: no
+      register: old_logs
+
+    - name: Delete old logfiles
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+
+    - name: Log deletion of old logfiles
+      shell: 'echo "[`date ''+%Y-%m-%d %H:%M:%S''`] Alte Logfiles gelöscht: {{ old_logs.matched }}" >> "{{ log_file }}"'
+      when: old_logs.matched > 0
