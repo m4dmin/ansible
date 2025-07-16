@@ -1,0 +1,29 @@
+---
+- name: Backup Docker container directories
+  hosts: all
+  become: true
+  become_method: sudo
+  become_user: root
+  vars:
+    docker_base_path: /home/madmin/docker
+    backup_target_dir: /home/madmin/backup/mnt
+    max_backups_per_container: 5
+    max_backup_age_days: 90
+    timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M') }}"
+    log_file: "{{ backup_target_dir }}/backup_log_{{ timestamp }}.log"
+  tasks:
+    - name: Ensure backup directory exists
+      become: true
+      become_method: sudo
+      become_user: root
+      file:
+        path: "{{ backup_target_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Get list of container directories
+      find:
+        paths: "{{ docker_base_path }}"
+        file_type: directory
+        depth: 1
+      register: container_dirs
